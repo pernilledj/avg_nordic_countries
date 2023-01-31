@@ -1,0 +1,127 @@
+---
+title: "Climate Change"
+author: "Pernille Jeppesen"
+date: "2023-01-29"
+output: html_document
+---
+#Goal 
+My goal with this project is to compare the average temperatures in the Nordic countries over time. The visualization I'm going to make will provide a visual representation of the average temperature trends in the Nordic countries allowing for an easy comparison between the countries. My goal is therefore to communicate the patterns and changes in average temperatures in a clear and concise manner. 
+It is important to acknowledge the changing in climate because it can have a significant impact on the northern region, as well all over the world. 
+Changes in temperature and precipitation patterns can affect e.g. the natural ecosystems, agriculture and rising sea levels with the melting of the ice in the Arctic could have significant consequences for coastal communities. 
+Understanding the impacts of climate change in the Nordic countries will help individuals make informed decisions about how to adapt to changing climate and work towards a sustainable future. 
+
+#The Data
+The data I'm using is "Berkely Earth Surface Temperature Data" from Kaggle. Kaggle is a platform for data science and machine learning competitions. It serves as a source of high-quality, open-source datasets, tootls and computational resources for data science. I was introduced to this homepage by a friend of mine and found this dataset on climate change. 
+The data I'm going to be using contains temperature observations for various countries from 1750 to 2015, which includes average temperature readings, as well as information about the sources of the observations. By using this data to compare the temperature trends in the Nordic countries I will be able to gain insight into the patterns and changes in temperature over time in the region. 
+
+Now I want to load the data and take a look to make observations, check the structure, missing values or inconsistencies. 
+```{r}
+library(readr)
+library(tidyverse)
+
+data <- read.csv("GlobalLandTemperaturesByCountry.csv")
+```
+The data shows a spreadsheet containing coloumns "dt" which contains the date of the temperature, "AverageTemperature" containing the temperature for the giving date, "AverageTemperatureUncertaincy" were the data shows the degree of uncertainty associated with the average temperature readings for each country and the last column "Country" which is for each country. 
+There is some missing values, where I'm guessing it's because there is no temperature from that date. 
+The dataset seems consistent since the rows continue throughout where the countries are sorted in alphabetic order. 
+
+#Visualization
+Since my goal is to compare the Nordic Countries I want to make a new data frame only containing the Nordic countries. From there I can make a graph showing the the average temperature for each of the Nordic countries on the y-axis and the year on the x-axis. The lines on the plot will be in different colors to represent each country
+```{r}
+nordic_countries <- c("Denmark (Europe)", "Finland", "Iceland", "Norway", "Sweden")
+
+```
+Now I want to filter the years from 1800 to 2015 because I decided that a good measurement of the chaning in the temperature. 
+```{r}
+library(dplyr)
+
+data <- as_tibble(data)
+```
+Now I have created the data as a tibble, because it needed to be done for making the graph. 
+
+```{r}
+df_nordic <- data %>%
+  filter(Country %in% nordic_countries & dt >= as.Date("1800-01-01") & dt <= as.Date("2015-12-31"))
+```
+The >= and <= combined with at the as.Date function tells that I needed til filter the data to choose the operator is greater than or equal to 1800-01-01 and the opposite with the date 2015-12-31, where it needs to stop. 
+
+Now I can calculate the average temperature for each country and year:
+```{r}
+library(lubridate)
+
+df_nordic_avg <- df_nordic %>%
+  group_by(Country, year = year(dt)) %>%
+  summarize(avg_temp = mean(AverageTemperature))
+```
+Now that I have done that I can make a graph showing the average temperature trends in a ggplot graph: 
+
+```{r}
+ggplot(df_nordic_avg, aes(year, avg_temp, color = Country)) +
+  geom_line() +
+  ggtitle("Average Temperature Trends in Nordic Countries") +
+  xlab("Year") +
+  ylab("Average Temperature (Celcius") +
+  theme_light() +
+  theme(legend.position = "bottom")
+```
+This graph shows that the average temperature in the Nordic countries has increased over time, where the lines is going upward. 
+The temperature seems to be relatively similar, with some differences between countries. 
+
+#Second Visualization
+I think it also could be nice to see the city temperatures of the capitals in these Nordic countries and since I have the data set GlobalLandTemperaturesByMajorCity I can do it as well. 
+
+First I will load the new data set:
+```{r}
+library(tidyverse)
+library(readr)
+
+city_temperature <- read.csv("GlobalLandTemperaturesByCity.csv")
+
+city_temperature <- as_tibble(city_temperature)
+```
+
+And now I will need to make the filtering by making a new data frame only containing the Nordic capitals:
+```{r}
+nordic_capitals <- c("Copenhagen", "Helsinki", "Oslo", "Stockholm", "Reykjavik")
+df_capital <- city_temperature %>% 
+  filter(City %in% nordic_capitals & dt >= as.Date("1800-01-01") & dt <= as.Date("2015-12-31"))
+
+```
+
+Now I can make the new graph (My first attempt didn't work... But the Error says that it only works with Date, which give me the hint, that I need to convert the dt column to date format):
+```{r}
+df_capital$dt <- as.Date(df_capital$dt, format = "%Y-%m-%d")
+```
+
+Then I try again. The setting for this graph is a little bit different since I experienced some errors:
+```{r}
+ggplot(df_capital, aes(x = dt, y = AverageTemperature, color = City)) +
+  geom_line() +
+  scale_x_date(date_labels = "%Y", date_breaks = "20 years") +
+  ggtitle("Average Temperature in Nordic Capital Cities") +
+  xlab("Year") +
+  ylab("Average Temperature (°C)") +
+  theme_classic()
+```
+The graph displays the average temperatures of the Nordic capitals over time. The results show the general trend of increasing temperatures over time, with some fluctuations and differences between the cities. The analysis of these results can help understand the local impacts of climate change and inform decision-making to mitigate its effects. However, it is important to keep in mind that the results are based on available data and may not fully reflect the actual temperature changes in the cities due to various factors such as measurement errors and changing weather patterns.
+
+#Third visualization
+I also thought it could be interesting to compare the danish cities only in a graph. 
+For that I can use the same dataset but by filtering only the Danish cities. 
+```{r}
+danish_cities <- city_temperature %>%
+  filter(Country == "Denmark")
+```
+And then I can make a graph showing the average temperature in the cities by using the same method as the other graphs (I got the same error as before by needing to convert the date to date format as well): 
+
+```{r}
+danish_cities$dt <- as.Date(danish_cities$dt, format = "%Y-%m-%d")
+
+ggplot(danish_cities, aes(x = dt, y = AverageTemperature, color = City)) +
+  geom_line() +
+  scale_x_date(limits = as.Date(c("1800-01-01", "2015-12-31"))) +
+  theme_minimal() +
+  labs(x = "Year", y = "Average Temperature (Celsius)") +
+  ggtitle("Average Temperature in Danish Cities")
+```
+This visualization isn't as different as the second graphs since the average temperature is pretty much the same for all the bigger cities in Denmark. 
